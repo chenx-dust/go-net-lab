@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net"
 	"sync"
@@ -53,23 +54,27 @@ func handleTCPConnection(local net.Conn, remoteAddr string) {
 	wg.Wait()
 }
 
-func forward(dst, src net.Conn) {
-	// Get a buffer from the pool
-	buffer_ptr := bufferPool.Get().(*[]byte)
-	// Return the buffer to the pool when done
-	defer bufferPool.Put(buffer_ptr)
-	buffer := *buffer_ptr
+// func forward(dst, src net.Conn) {
+// 	// Get a buffer from the pool
+// 	buffer_ptr := bufferPool.Get().(*[]byte)
+// 	// Return the buffer to the pool when done
+// 	defer bufferPool.Put(buffer_ptr)
+// 	buffer := *buffer_ptr
 
-	for {
-		n, err := src.Read(buffer)
-		if err != nil {
-			return
-		}
-		if n > 0 {
-			_, err := dst.Write(buffer[:n])
-			if err != nil {
-				return
-			}
-		}
-	}
+// 	for {
+// 		n, err := src.Read(buffer)
+// 		if err != nil {
+// 			return
+// 		}
+// 		if n > 0 {
+// 			_, err := dst.Write(buffer[:n])
+// 			if err != nil {
+// 				return
+// 			}
+// 		}
+// 	}
+// }
+
+func forward(dst, src net.Conn) {
+	io.Copy(dst, src)
 }

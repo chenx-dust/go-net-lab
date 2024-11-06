@@ -35,11 +35,11 @@ func main() {
 	udp := flag.Bool("udp", false, "use udp")
 	count := flag.Int("count", 0, "number of pings")
 	interval := flag.Duration("interval", 1*time.Second, "interval between pings")
-	pkgSize := flag.Int("pkg-size", 1024, "package size")
+	pkgSize := flag.Int("size", 1024, "packet size")
 	flag.Parse()
 
 	if *pkgSize < 3 {
-		log.Fatalf("Package size must be greater than 2")
+		log.Fatalf("Packet size must be greater than 2")
 	}
 
 	pingRecord := make([]time.Duration, 0, *count)
@@ -160,11 +160,11 @@ func ping(conn net.Conn, count int, interval time.Duration, pkgSize int, pingRec
 	}
 }
 
-func pingTcp(dst string, count int, interval time.Duration, pkgSize int, pingRecord *[]time.Duration, waitingPings *map[int]WaitingPing, mutex *sync.Mutex) {
+func pingTcp(dst string, count int, interval time.Duration, size int, pingRecord *[]time.Duration, waitingPings *map[int]WaitingPing, mutex *sync.Mutex) {
 	fmt.Println("Pinging", dst, "with TCP")
 	fmt.Println("Count:", count)
 	fmt.Println("Interval:", interval)
-	fmt.Println("Package size:", pkgSize)
+	fmt.Println("Packet size:", size)
 	fmt.Println("================================================")
 
 	conn, err := net.Dial("tcp", dst)
@@ -173,14 +173,14 @@ func pingTcp(dst string, count int, interval time.Duration, pkgSize int, pingRec
 	}
 	defer conn.Close()
 
-	ping(conn, count, interval, pkgSize, pingRecord, waitingPings, mutex)
+	ping(conn, count, interval, size, pingRecord, waitingPings, mutex)
 }
 
-func pingUdp(dst string, count int, interval time.Duration, pkgSize int, pingRecord *[]time.Duration, waitingPings *map[int]WaitingPing, mutex *sync.Mutex) {
+func pingUdp(dst string, count int, interval time.Duration, size int, pingRecord *[]time.Duration, waitingPings *map[int]WaitingPing, mutex *sync.Mutex) {
 	fmt.Println("Pinging", dst, "with UDP")
 	fmt.Println("Count:", count)
 	fmt.Println("Interval:", interval)
-	fmt.Println("Package size:", pkgSize)
+	fmt.Println("Packet size:", size)
 	fmt.Println("================================================")
 
 	udpAddr, err := net.ResolveUDPAddr("udp", dst)
@@ -193,5 +193,5 @@ func pingUdp(dst string, count int, interval time.Duration, pkgSize int, pingRec
 	}
 	defer conn.Close()
 
-	ping(conn, count, interval, pkgSize, pingRecord, waitingPings, mutex)
+	ping(conn, count, interval, size, pingRecord, waitingPings, mutex)
 }
