@@ -23,14 +23,29 @@ type Config struct {
 	RemoteAddr   string        // not necessary in ClientMode
 	RelayServers []RelayServer // only used in ClientMode
 	RelayType    RelayType     // only used in RelayMode
+	BufferSize   int
 }
 
 type RelayServer struct {
-	addr     string
-	connType ConnectionType
+	Address  string
+	ConnType ConnectionType
+	Weight   int
 }
 
 type RelayType struct {
-	listenType  ConnectionType
-	forwardType ConnectionType
+	ListenType  ConnectionType
+	ForwardType ConnectionType
+}
+
+func ConnTypeToString(connType ConnectionType) string {
+	switch connType {
+	case TCPConnectionType:
+		return "tcp"
+	case UDPConnectionType:
+		return "udp"
+	case BothConnectionType:
+		return "both"
+	default:
+		return "unknown"
+	}
 }

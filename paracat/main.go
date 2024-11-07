@@ -5,25 +5,30 @@ import (
 	"log"
 
 	"github.com/chenx-dust/go-net-lab/paracat/app"
+	"github.com/chenx-dust/go-net-lab/paracat/app/client"
+	"github.com/chenx-dust/go-net-lab/paracat/app/relay"
+	"github.com/chenx-dust/go-net-lab/paracat/app/server"
 	"github.com/chenx-dust/go-net-lab/paracat/config"
 )
 
 func main() {
-	cfgFilename := flag.String("c", "config.yaml", "config file")
+	cfgFilename := flag.String("c", "config.json", "config file")
 	flag.Parse()
 
+	log.Println("loading config from", *cfgFilename)
 	cfg, err := config.LoadFromFile(*cfgFilename)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+	// log.Println("config loaded:", cfg)
 
 	var application app.App
 	if cfg.Mode == config.ClientMode {
-		application = app.NewClient(cfg)
+		application = client.NewClient(cfg)
 	} else if cfg.Mode == config.ServerMode {
-		application = app.NewServer(cfg)
+		application = server.NewServer(cfg)
 	} else if cfg.Mode == config.RelayMode {
-		application = app.NewRelay(cfg)
+		application = relay.NewRelay(cfg)
 	} else {
 		log.Fatalf("Invalid mode: %v", cfg.Mode)
 	}

@@ -8,12 +8,27 @@ import (
 
 // JSONConfig represents the JSON structure that matches Config
 type JSONConfig struct {
-	Mode         string        `json:"mode"`
-	ListenAddr   string        `json:"listen_addr"`
-	RemoteAddr   string        `json:"remote_addr,omitempty"`
-	RelayServers []RelayServer `json:"relay_servers,omitempty"`
-	RelayType    *RelayType    `json:"relay_type,omitempty"`
+	Mode         string            `json:"mode"`
+	ListenAddr   string            `json:"listen_addr"`
+	RemoteAddr   string            `json:"remote_addr,omitempty"`
+	RelayServers []JSONRelayServer `json:"relay_servers,omitempty"`
+	RelayType    *JSONRelayType    `json:"relay_type,omitempty"`
+	BufferSize   *int              `json:"buffer_size,omitempty"`
 }
+
+type JSONRelayServer struct {
+	Addr     string `json:"addr"`
+	ConnType string `json:"conn_type"`
+	Weight   *int   `json:"weight,omitempty"`
+}
+
+type JSONRelayType struct {
+	ListenType  string `json:"listen_type"`
+	ForwardType string `json:"forward_type"`
+}
+
+const defaultWeight = 1
+const defaultBufferSize = 1500
 
 // LoadFromFile reads and parses a JSON configuration file
 func LoadFromFile(filepath string) (*Config, error) {
@@ -45,16 +60,58 @@ func convertJSONConfig(jc JSONConfig) (*Config, error) {
 		return nil, fmt.Errorf("invalid mode: %s", jc.Mode)
 	}
 
+	bufferSize := defaultBufferSize
+	if jc.BufferSize != nil {
+		bufferSize = *jc.BufferSize
+	}
+
 	config := &Config{
 		Mode:         mode,
 		ListenAddr:   jc.ListenAddr,
 		RemoteAddr:   jc.RemoteAddr,
-		RelayServers: jc.RelayServers,
+		RelayServers: convertJSONRelayServers(jc.RelayServers),
+		BufferSize:   bufferSize,
 	}
 
 	if jc.RelayType != nil {
-		config.RelayType = *jc.RelayType
+		config.RelayType = convertJSONRelayType(*jc.RelayType)
 	}
 
 	return config, nil
+}
+
+func convertJSONRelayServers(jsrs []JSONRelayServer) []RelayServer {
+	rs := make([]RelayServer, len(jsrs))
+	for i, jsr := range jsrs {
+		weight := defaultWeight
+		if jsr.Weight != nil {
+			weight = *jsr.Weight
+		}
+		rs[i] = RelayServer{
+			Address:  jsr.Addr,
+			ConnType: convertJSONConnectionType(jsr.ConnType),
+			Weight:   weight,
+		}
+	}
+	return rs
+}
+
+func convertJSONRelayType(jrt JSONRelayType) RelayType {
+	return RelayType{
+		ListenType:  convertJSONConnectionType(jrt.ListenType),
+		ForwardType: convertJSONConnectionType(jrt.ForwardType),
+	}
+}
+
+func convertJSONConnectionType(connType string) ConnectionType {
+	switch connType {
+	case "tcp":
+		return TCPConnectionType
+	case "udp":
+		return UDPConnectionType
+	case "both":
+		return BothConnectionType
+	default:
+		return NotDefinedConnectionType
+	}
 }

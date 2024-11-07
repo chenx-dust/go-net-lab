@@ -1,4 +1,4 @@
-package app
+package relay
 
 import (
 	"github.com/chenx-dust/go-net-lab/paracat/config"
