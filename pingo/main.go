@@ -88,6 +88,9 @@ func main() {
 		}
 	}
 	num := len(pingRecord) - loss
+	if num == 0 {
+		log.Fatalf("No pings received")
+	}
 	avg /= time.Duration(num)
 	stddev := time.Duration(math.Sqrt(float64(sqrAvg/time.Duration(num) - avg*avg)))
 

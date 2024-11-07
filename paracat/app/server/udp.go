@@ -8,11 +8,10 @@ import (
 
 func (server *Server) handleUDP() {
 	for {
-		buf := server.bufferPool.Get().([]byte)
+		buf := make([]byte, server.cfg.BufferSize)
 		n, err := server.udpListener.Read(buf)
 		if err != nil {
-			log.Println("error reading packet:", err)
-			continue
+			log.Fatalln("error reading packet:", err)
 		}
 
 		connID, packetID, data, err := packet.Unpack(buf[:n])
@@ -27,7 +26,6 @@ func (server *Server) handleUDP() {
 		}
 
 		go func() {
-			defer server.bufferPool.Put(&buf)
 			server.forward(data, connID)
 		}()
 	}

@@ -22,16 +22,14 @@ type Server struct {
 	forwardConns map[uint16]*net.UDPConn
 
 	packetFilter *packet.PacketFilter
-
-	bufferPool sync.Pool
 }
 
 func NewServer(cfg *config.Config) *Server {
-	return &Server{cfg: cfg, packetFilter: packet.NewPacketManager(), bufferPool: sync.Pool{
-		New: func() any {
-			return make([]byte, cfg.BufferSize)
-		},
-	}}
+	return &Server{
+		cfg:          cfg,
+		packetFilter: packet.NewPacketManager(),
+		forwardConns: make(map[uint16]*net.UDPConn),
+	}
 }
 
 func (server *Server) Run() error {

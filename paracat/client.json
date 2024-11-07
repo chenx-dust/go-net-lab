@@ -1,6 +1,6 @@
 {
     "mode": "client",
-    "listen_addr": "127.0.0.1:9000",
+    "listen_addr": "0.0.0.0:9000",
     "relay_servers": [
         {"addr": "127.0.0.1:9001", "conn_type": "tcp"},
         {"addr": "127.0.0.1:9001", "conn_type": "udp"}

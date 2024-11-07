@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"log"
 	"net"
 	"sync"
@@ -22,16 +23,15 @@ type Client struct {
 	connAddrIDMap map[string]uint16
 
 	packetFilter *packet.PacketFilter
-
-	bufferPool sync.Pool
 }
 
 func NewClient(cfg *config.Config) *Client {
-	return &Client{cfg: cfg, packetFilter: packet.NewPacketManager(), bufferPool: sync.Pool{
-		New: func() any {
-			return make([]byte, cfg.BufferSize)
-		},
-	}}
+	return &Client{
+		cfg:           cfg,
+		packetFilter:  packet.NewPacketManager(),
+		connIDAddrMap: make(map[uint16]*net.UDPAddr),
+		connAddrIDMap: make(map[string]uint16),
+	}
 }
 
 func (client *Client) Run() error {
@@ -47,35 +47,9 @@ func (client *Client) Run() error {
 	}
 	log.Println("listening on", client.cfg.ListenAddr)
 
-	for _, relay := range client.cfg.RelayServers {
-		for i := 0; i < relay.Weight; i++ {
-			switch relay.ConnType {
-			case config.TCPConnectionType:
-				tcpAddr, err := net.ResolveTCPAddr("tcp", relay.Address)
-				if err != nil {
-					return err
-				}
-				conn, err := net.DialTCP("tcp", nil, tcpAddr)
-				if err != nil {
-					return err
-				}
-				client.tcpRelays = append(client.tcpRelays, conn)
-				log.Println("connected to tcp relay", relay.Address)
-			case config.UDPConnectionType:
-				udpAddr, err := net.ResolveUDPAddr("udp", relay.Address)
-				if err != nil {
-					return err
-				}
-				conn, err := net.DialUDP("udp", nil, udpAddr)
-				if err != nil {
-					return err
-				}
-				client.udpRelays = append(client.udpRelays, conn)
-				log.Println("connected to udp relay", relay.Address)
-			default:
-				log.Fatalf("invalid connection type")
-			}
-		}
+	err = client.initRelays()
+	if err != nil {
+		return err
 	}
 
 	wg := sync.WaitGroup{}
@@ -100,5 +74,42 @@ func (client *Client) Run() error {
 	}
 	wg.Wait()
 
+	return nil
+}
+
+func (client *Client) initRelays() error {
+	for _, relay := range client.cfg.RelayServers {
+		for i := 0; i < relay.Weight; i++ {
+			if relay.ConnType == config.NotDefinedConnectionType {
+				return errors.New("invalid connection type")
+			}
+			enableTCP := relay.ConnType&config.TCPConnectionType != 0
+			enableUDP := relay.ConnType&config.UDPConnectionType != 0
+			if enableTCP {
+				tcpAddr, err := net.ResolveTCPAddr("tcp", relay.Address)
+				if err != nil {
+					return err
+				}
+				conn, err := net.DialTCP("tcp", nil, tcpAddr)
+				if err != nil {
+					return err
+				}
+				client.tcpRelays = append(client.tcpRelays, conn)
+				log.Println("connected to tcp relay", relay.Address)
+			}
+			if enableUDP {
+				udpAddr, err := net.ResolveUDPAddr("udp", relay.Address)
+				if err != nil {
+					return err
+				}
+				conn, err := net.DialUDP("udp", nil, udpAddr)
+				if err != nil {
+					return err
+				}
+				client.udpRelays = append(client.udpRelays, conn)
+				log.Println("connected to udp relay", relay.Address)
+			}
+		}
+	}
 	return nil
 }

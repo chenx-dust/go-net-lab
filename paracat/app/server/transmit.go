@@ -10,18 +10,15 @@ import (
 
 func (server *Server) forward(buf []byte, connID uint16) {
 	server.forwardMutex.Lock()
-	defer server.forwardMutex.Unlock()
 	conn, ok := server.forwardConns[connID]
 	if !ok {
 		remoteAddr, err := net.ResolveUDPAddr("udp", server.cfg.RemoteAddr)
 		if err != nil {
-			log.Println("error resolving remote addr:", err)
-			return
+			log.Fatalln("error resolving remote addr:", err)
 		}
 		conn, err = net.DialUDP("udp", nil, remoteAddr)
 		if err != nil {
-			log.Println("error dialing relay:", err)
-			return
+			log.Fatalln("error dialing relay:", err)
 		}
 		server.forwardConns[connID] = conn
 		go server.handleReverse(conn, connID)
@@ -33,15 +30,13 @@ func (server *Server) forward(buf []byte, connID uint16) {
 
 func (server *Server) handleReverse(conn *net.UDPConn, connID uint16) {
 	for {
-		buf := server.bufferPool.Get().([]byte)
+		buf := make([]byte, server.cfg.BufferSize)
 		n, err := conn.Read(buf)
 		if err != nil {
-			log.Println("error reading from udp:", err)
-			continue
+			log.Fatalln("error reading from udp:", err)
 		}
 
 		go func() {
-			defer server.bufferPool.Put(&buf)
 			packetID := server.packetFilter.NewPacketID()
 
 			wg := sync.WaitGroup{}

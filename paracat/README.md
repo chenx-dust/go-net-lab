@@ -28,3 +28,8 @@ flowchart LR
 
     OUT --> S
 ```
+
+## TODO
+
+- [ ] Remove unused UDP connections
+- [ ] Optimize delay

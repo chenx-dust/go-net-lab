@@ -11,8 +11,7 @@ func (server *Server) handleTCP() {
 	for {
 		conn, err := server.tcpListener.AcceptTCP()
 		if err != nil {
-			log.Println("error accepting tcp connection:", err)
-			continue
+			log.Fatalln("error accepting tcp connection:", err)
 		}
 		server.sourceMutex.Lock()
 		server.sourceTCPConns = append(server.sourceTCPConns, conn)
@@ -24,11 +23,10 @@ func (server *Server) handleTCP() {
 func (server *Server) handleTCPConn(conn *net.TCPConn) {
 	defer conn.Close()
 	for {
-		buf := server.bufferPool.Get().([]byte)
+		buf := make([]byte, server.cfg.BufferSize)
 		n, connID, packetID, err := packet.ReadPacket(conn, buf)
 		if err != nil {
-			log.Println("error reading packet:", err)
-			continue
+			log.Fatalln("error reading packet:", err)
 		}
 
 		isDuplicate := server.packetFilter.CheckDuplicatePacketID(packetID)
@@ -37,7 +35,6 @@ func (server *Server) handleTCPConn(conn *net.TCPConn) {
 		}
 
 		go func() {
-			defer server.bufferPool.Put(&buf)
 			server.forward(buf[:n], connID)
 		}()
 	}

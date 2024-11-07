@@ -9,14 +9,12 @@ import (
 
 func (client *Client) handleForward() {
 	for {
-		buf := client.bufferPool.Get().([]byte)
+		buf := make([]byte, client.cfg.BufferSize)
 		n, addr, err := client.udpListener.ReadFromUDP(buf)
 		if err != nil {
-			log.Println("error reading from udp conn:", err)
-			continue
+			log.Fatalln("error reading from udp conn:", err)
 		}
 		go func() {
-			defer client.bufferPool.Put(&buf)
 			connID, ok := client.connAddrIDMap[addr.String()]
 			if !ok {
 				connID = uint16(client.connIncrement.Add(1) - 1)
