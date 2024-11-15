@@ -20,14 +20,17 @@ func (server *Server) handleTCP() {
 	}
 }
 
-func (server *Server) handleTCPConn(conn *net.TCPConn) {
+func (server *Server) handleTCPConn(conn *net.TCPConn) error {
 	defer conn.Close()
 	for {
 		buf := make([]byte, server.cfg.BufferSize)
 		n, connID, packetID, err := packet.ReadPacket(conn, buf)
 		if err != nil {
-			log.Fatalln("error reading packet:", err)
+			log.Println("error reading packet:", err)
+			log.Println("stop handling connection from:", conn.RemoteAddr().String())
+			return err
 		}
+		server.packetStat.ForwardRecv.CountPacket(uint32(n))
 
 		isDuplicate := server.packetFilter.CheckDuplicatePacketID(packetID)
 		if isDuplicate {

@@ -32,6 +32,7 @@ func WritePacket(writer io.Writer, buffer []byte, connID uint16, packetID uint16
 		}
 		n += n_
 	}
+	n -= 7
 	return
 }
 

@@ -4,5 +4,6 @@
     "relay_servers": [
         {"addr": "127.0.0.1:9001", "conn_type": "tcp"},
         {"addr": "127.0.0.1:9001", "conn_type": "udp"}
-    ]
+    ],
+    "report_interval": "10s"
 }

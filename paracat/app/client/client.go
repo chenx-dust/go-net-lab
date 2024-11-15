@@ -75,13 +75,15 @@ func (client *Client) Run() error {
 			client.handleUDPReverse(relay)
 		}()
 	}
-	go func() {
-		ticker := time.NewTicker(client.cfg.ReportInterval)
-		defer ticker.Stop()
-		for range ticker.C {
-			client.packetStat.Print(client.cfg.ReportInterval)
-		}
-	}()
+	if client.cfg.ReportInterval > 0 {
+		go func() {
+			ticker := time.NewTicker(client.cfg.ReportInterval)
+			defer ticker.Stop()
+			for range ticker.C {
+				client.packetStat.Print(client.cfg.ReportInterval)
+			}
+		}()
+	}
 	wg.Wait()
 
 	return nil

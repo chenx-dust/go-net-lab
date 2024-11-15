@@ -57,6 +57,7 @@ func (server *Server) Run() error {
 		return err
 	}
 	log.Println("listening on", server.cfg.ListenAddr)
+	log.Println("dialing to", server.cfg.RemoteAddr)
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -68,13 +69,15 @@ func (server *Server) Run() error {
 		defer wg.Done()
 		server.handleUDP()
 	}()
-	go func() {
-		ticker := time.NewTicker(server.cfg.ReportInterval)
-		defer ticker.Stop()
-		for range ticker.C {
-			server.packetStat.Print(server.cfg.ReportInterval)
-		}
-	}()
+	if server.cfg.ReportInterval > 0 {
+		go func() {
+			ticker := time.NewTicker(server.cfg.ReportInterval)
+			defer ticker.Stop()
+			for range ticker.C {
+				server.packetStat.Print(server.cfg.ReportInterval)
+			}
+		}()
+	}
 	wg.Wait()
 
 	return nil

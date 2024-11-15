@@ -13,6 +13,7 @@ func (client *Client) handleForward() {
 		if err != nil {
 			log.Fatalln("error reading from udp conn:", err)
 		}
+		client.packetStat.ForwardRecv.CountPacket(uint32(n))
 		go func() {
 			connID, ok := client.connAddrIDMap[addr.String()]
 			if !ok {
@@ -24,17 +25,16 @@ func (client *Client) handleForward() {
 			}
 			packetID := client.packetFilter.NewPacketID()
 
-			client.packetStat.Forward.CountPacket(uint32(n))
-
 			for _, relay := range client.tcpRelays {
 				go func() {
-					n, err := packet.WritePacket(relay, buf[:n], connID, packetID)
+					n1, err := packet.WritePacket(relay, buf[:n], connID, packetID)
 					if err != nil {
 						log.Println("error writing to tcp:", err)
 					}
-					if n != len(buf) {
-						log.Println("error writing to tcp: wrote", n, "bytes instead of", len(buf))
+					if n1 != n {
+						log.Println("error writing to tcp: wrote", n1, "bytes instead of", n)
 					}
+					client.packetStat.ForwardSend.CountPacket(uint32(n1))
 				}()
 			}
 			udpPacked := packet.Pack(buf[:n], connID, packetID)
@@ -47,6 +47,7 @@ func (client *Client) handleForward() {
 					if n != len(udpPacked) {
 						log.Println("error writing to udp: wrote", n, "bytes instead of", len(udpPacked))
 					}
+					client.packetStat.ForwardSend.CountPacket(uint32(n))
 				}()
 			}
 		}()

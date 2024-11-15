@@ -15,7 +15,7 @@ type JSONConfig struct {
 	RelayServers   []JSONRelayServer `json:"relay_servers,omitempty"`
 	RelayType      *JSONRelayType    `json:"relay_type,omitempty"`
 	BufferSize     *int              `json:"buffer_size,omitempty"`
-	ReportInterval *time.Duration    `json:"report_interval,omitempty"`
+	ReportInterval *string           `json:"report_interval,omitempty"`
 }
 
 type JSONRelayServer struct {
@@ -31,7 +31,7 @@ type JSONRelayType struct {
 
 const defaultWeight = 1
 const defaultBufferSize = 1500
-const defaultReportInterval = 1 * time.Second
+const defaultReportInterval = 0 * time.Second
 
 // LoadFromFile reads and parses a JSON configuration file
 func LoadFromFile(filepath string) (*Config, error) {
@@ -70,7 +70,11 @@ func convertJSONConfig(jc JSONConfig) (*Config, error) {
 
 	reportInterval := defaultReportInterval
 	if jc.ReportInterval != nil {
-		reportInterval = *jc.ReportInterval
+		d, err := time.ParseDuration(*jc.ReportInterval)
+		if err != nil {
+			return nil, fmt.Errorf("invalid report interval: %w", err)
+		}
+		reportInterval = d
 	}
 
 	config := &Config{

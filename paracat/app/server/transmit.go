@@ -21,7 +21,8 @@ func (server *Server) forward(buf []byte, connID uint16) {
 			}
 			conn, err = net.DialUDP("udp", nil, remoteAddr)
 			if err != nil {
-				log.Fatalln("error dialing relay:", err)
+				log.Println("error dialing relay:", err)
+				return
 			}
 			server.forwardConns[connID] = conn
 			go server.handleReverse(conn, connID)
@@ -29,7 +30,7 @@ func (server *Server) forward(buf []byte, connID uint16) {
 		server.forwardMutex.Unlock()
 	}
 
-	server.packetStat.Reverse.CountPacket(uint32(len(buf)))
+	server.packetStat.ForwardSend.CountPacket(uint32(len(buf)))
 
 	n, err := conn.Write(buf)
 	if err != nil {
@@ -45,9 +46,11 @@ func (server *Server) handleReverse(conn *net.UDPConn, connID uint16) {
 		buf := make([]byte, server.cfg.BufferSize)
 		n, err := conn.Read(buf)
 		if err != nil {
-			log.Fatalln("error reading from udp:", err)
+			log.Println("error reading from udp:", err)
+			log.Println("stop handling reverse conn from:", conn.RemoteAddr().String())
+			return
 		}
-		server.packetStat.Forward.CountPacket(uint32(n))
+		server.packetStat.ReverseRecv.CountPacket(uint32(n))
 
 		go func() {
 			packetID := server.packetFilter.NewPacketID()
@@ -55,13 +58,14 @@ func (server *Server) handleReverse(conn *net.UDPConn, connID uint16) {
 			server.sourceMutex.RLock()
 			for _, sourceConn := range server.sourceTCPConns {
 				go func() {
-					n, err := packet.WritePacket(sourceConn, buf[:n], connID, packetID)
+					n1, err := packet.WritePacket(sourceConn, buf[:n], connID, packetID)
 					if err != nil {
-						log.Println("error writing to tcp:", err)
+						log.Println("error writing to tcp:", err, "to:", sourceConn.RemoteAddr().String())
 					}
-					if n != len(buf) {
-						log.Println("error writing to tcp: wrote", n, "bytes instead of", len(buf))
+					if n1 != n {
+						log.Println("error writing to tcp: wrote", n1, "bytes instead of", n, "to:", sourceConn.RemoteAddr().String())
 					}
+					server.packetStat.ReverseSend.CountPacket(uint32(n1))
 				}()
 			}
 			udpPacked := packet.Pack(buf[:n], connID, packetID)
@@ -69,15 +73,17 @@ func (server *Server) handleReverse(conn *net.UDPConn, connID uint16) {
 				go func() {
 					sourceAddr, err := net.ResolveUDPAddr("udp", sourceStr)
 					if err != nil {
-						log.Fatalln("error resolving source addr:", err)
+						log.Println("error resolving source addr:", err, "to:", sourceStr)
+						return
 					}
 					n, err := server.udpListener.WriteToUDP(udpPacked, sourceAddr)
 					if err != nil {
-						log.Println("error writing to udp:", err)
+						log.Println("error writing to udp:", err, "to:", sourceStr)
 					}
 					if n != len(udpPacked) {
-						log.Println("error writing to udp: wrote", n, "bytes instead of", len(udpPacked))
+						log.Println("error writing to udp: wrote", n, "bytes instead of", len(udpPacked), "to:", sourceStr)
 					}
+					server.packetStat.ReverseSend.CountPacket(uint32(n))
 				}()
 			}
 			server.sourceMutex.RUnlock()

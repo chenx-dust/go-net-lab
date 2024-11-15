@@ -12,8 +12,10 @@ type PacketStatistic struct {
 }
 
 type BiPacketStatistic struct {
-	Forward PacketStatistic
-	Reverse PacketStatistic
+	ForwardRecv PacketStatistic
+	ForwardSend PacketStatistic
+	ReverseRecv PacketStatistic
+	ReverseSend PacketStatistic
 }
 
 func NewPacketStatistic() *PacketStatistic {
@@ -36,8 +38,13 @@ func (ps *PacketStatistic) GetAndReset() (count uint32, bandwidth uint64) {
 }
 
 func (bps *BiPacketStatistic) Print(period time.Duration) {
-	sendCount, sendBandwidth := bps.Forward.GetAndReset()
-	recvCount, recvBandwidth := bps.Reverse.GetAndReset()
-	log.Printf("forward: %d packets, %d bytes in %s, %.2f bytes/s", sendCount, sendBandwidth, period, float64(sendBandwidth)/period.Seconds())
-	log.Printf("reverse: %d packets, %d bytes in %s, %.2f bytes/s", recvCount, recvBandwidth, period, float64(recvBandwidth)/period.Seconds())
+	fwdRecvCount, fwdRecvBandwidth := bps.ForwardRecv.GetAndReset()
+	fwdSendCount, fwdSendBandwidth := bps.ForwardSend.GetAndReset()
+	log.Printf("forward recv: %d packets, %d bytes in %s, %.2f bytes/s", fwdRecvCount, fwdRecvBandwidth, period, float64(fwdRecvBandwidth)/period.Seconds())
+	log.Printf("forward send: %d packets, %d bytes in %s, %.2f bytes/s", fwdSendCount, fwdSendBandwidth, period, float64(fwdSendBandwidth)/period.Seconds())
+
+	rvsRecvCount, rvsRecvBandwidth := bps.ReverseRecv.GetAndReset()
+	rvsSendCount, rvsSendBandwidth := bps.ReverseSend.GetAndReset()
+	log.Printf("reverse recv: %d packets, %d bytes in %s, %.2f bytes/s", rvsRecvCount, rvsRecvBandwidth, period, float64(rvsRecvBandwidth)/period.Seconds())
+	log.Printf("reverse send: %d packets, %d bytes in %s, %.2f bytes/s", rvsSendCount, rvsSendBandwidth, period, float64(rvsSendBandwidth)/period.Seconds())
 }

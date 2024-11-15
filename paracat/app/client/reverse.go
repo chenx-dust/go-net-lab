@@ -12,8 +12,11 @@ func (client *Client) handleTCPReverse(conn *net.TCPConn) error {
 		buf := make([]byte, client.cfg.BufferSize)
 		n, connID, packetID, err := packet.ReadPacket(conn, buf)
 		if err != nil {
-			log.Fatalln("error reading from reverse conn:", err)
+			log.Println("error reading from reverse conn:", err)
+			log.Println("close reverse conn from:", conn.RemoteAddr())
+			return err
 		}
+		client.packetStat.ReverseRecv.CountPacket(uint32(n))
 
 		isDuplicate := client.packetFilter.CheckDuplicatePacketID(packetID)
 		if isDuplicate {
@@ -29,8 +32,11 @@ func (client *Client) handleUDPReverse(conn *net.UDPConn) error {
 		buf := make([]byte, client.cfg.BufferSize)
 		n, err := conn.Read(buf)
 		if err != nil {
-			log.Fatalln("error reading from reverse conn:", err)
+			log.Println("error reading from reverse conn:", err)
+			log.Println("close reverse conn from:", conn.RemoteAddr())
+			return err
 		}
+		client.packetStat.ReverseRecv.CountPacket(uint32(n))
 
 		connID, packetID, data, err := packet.Unpack(buf[:n])
 		if err != nil {
@@ -55,7 +61,6 @@ func (client *Client) sendReverse(buf []byte, length int, connID uint16) {
 		log.Println("conn not found")
 		return
 	}
-	client.packetStat.Reverse.CountPacket(uint32(length))
 	n, err := client.udpListener.WriteToUDP(buf[:length], udpAddr)
 	if err != nil {
 		log.Println("error writing to udp:", err)
@@ -63,4 +68,5 @@ func (client *Client) sendReverse(buf []byte, length int, connID uint16) {
 	if n != length {
 		log.Println("error writing to udp: wrote", n, "bytes instead of", length)
 	}
+	client.packetStat.ReverseSend.CountPacket(uint32(n))
 }
