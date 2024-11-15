@@ -4,16 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 )
 
 // JSONConfig represents the JSON structure that matches Config
 type JSONConfig struct {
-	Mode         string            `json:"mode"`
-	ListenAddr   string            `json:"listen_addr"`
-	RemoteAddr   string            `json:"remote_addr,omitempty"`
-	RelayServers []JSONRelayServer `json:"relay_servers,omitempty"`
-	RelayType    *JSONRelayType    `json:"relay_type,omitempty"`
-	BufferSize   *int              `json:"buffer_size,omitempty"`
+	Mode           string            `json:"mode"`
+	ListenAddr     string            `json:"listen_addr"`
+	RemoteAddr     string            `json:"remote_addr,omitempty"`
+	RelayServers   []JSONRelayServer `json:"relay_servers,omitempty"`
+	RelayType      *JSONRelayType    `json:"relay_type,omitempty"`
+	BufferSize     *int              `json:"buffer_size,omitempty"`
+	ReportInterval *time.Duration    `json:"report_interval,omitempty"`
 }
 
 type JSONRelayServer struct {
@@ -29,6 +31,7 @@ type JSONRelayType struct {
 
 const defaultWeight = 1
 const defaultBufferSize = 1500
+const defaultReportInterval = 1 * time.Second
 
 // LoadFromFile reads and parses a JSON configuration file
 func LoadFromFile(filepath string) (*Config, error) {
@@ -65,12 +68,18 @@ func convertJSONConfig(jc JSONConfig) (*Config, error) {
 		bufferSize = *jc.BufferSize
 	}
 
+	reportInterval := defaultReportInterval
+	if jc.ReportInterval != nil {
+		reportInterval = *jc.ReportInterval
+	}
+
 	config := &Config{
-		Mode:         mode,
-		ListenAddr:   jc.ListenAddr,
-		RemoteAddr:   jc.RemoteAddr,
-		RelayServers: convertJSONRelayServers(jc.RelayServers),
-		BufferSize:   bufferSize,
+		Mode:           mode,
+		ListenAddr:     jc.ListenAddr,
+		RemoteAddr:     jc.RemoteAddr,
+		RelayServers:   convertJSONRelayServers(jc.RelayServers),
+		BufferSize:     bufferSize,
+		ReportInterval: reportInterval,
 	}
 
 	if jc.RelayType != nil {

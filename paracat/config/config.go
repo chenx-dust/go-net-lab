@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 type AppMode int
 type ConnectionType int
 
@@ -18,12 +20,13 @@ const (
 )
 
 type Config struct {
-	Mode         AppMode
-	ListenAddr   string
-	RemoteAddr   string        // not necessary in ClientMode
-	RelayServers []RelayServer // only used in ClientMode
-	RelayType    RelayType     // only used in RelayMode
-	BufferSize   int
+	Mode           AppMode
+	ListenAddr     string
+	RemoteAddr     string        // not necessary in ClientMode
+	RelayServers   []RelayServer // only used in ClientMode
+	RelayType      RelayType     // only used in RelayMode
+	BufferSize     int
+	ReportInterval time.Duration
 }
 
 type RelayServer struct {

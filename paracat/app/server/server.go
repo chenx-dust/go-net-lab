@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/chenx-dust/go-net-lab/paracat/config"
 	"github.com/chenx-dust/go-net-lab/paracat/packet"
@@ -16,19 +17,22 @@ type Server struct {
 
 	sourceMutex    sync.RWMutex
 	sourceTCPConns []*net.TCPConn
-	sourceUDPAddrs []*net.UDPAddr
+	sourceUDPAddrs map[string]struct{}
 
-	forwardMutex sync.Mutex
+	forwardMutex sync.RWMutex
 	forwardConns map[uint16]*net.UDPConn
 
 	packetFilter *packet.PacketFilter
+	packetStat   *packet.BiPacketStatistic
 }
 
 func NewServer(cfg *config.Config) *Server {
 	return &Server{
-		cfg:          cfg,
-		packetFilter: packet.NewPacketManager(),
-		forwardConns: make(map[uint16]*net.UDPConn),
+		cfg:            cfg,
+		forwardConns:   make(map[uint16]*net.UDPConn),
+		sourceUDPAddrs: make(map[string]struct{}),
+		packetFilter:   packet.NewPacketManager(),
+		packetStat:     packet.NewBiPacketStatistic(),
 	}
 }
 
@@ -63,6 +67,13 @@ func (server *Server) Run() error {
 	go func() {
 		defer wg.Done()
 		server.handleUDP()
+	}()
+	go func() {
+		ticker := time.NewTicker(server.cfg.ReportInterval)
+		defer ticker.Stop()
+		for range ticker.C {
+			server.packetStat.Print(server.cfg.ReportInterval)
+		}
 	}()
 	wg.Wait()
 

@@ -33,3 +33,4 @@ flowchart LR
 
 - [ ] Remove unused UDP connections
 - [ ] Optimize delay
+- [ ] Re-connect after EOF

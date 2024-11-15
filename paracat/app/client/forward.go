@@ -2,7 +2,6 @@ package client
 
 import (
 	"log"
-	"sync"
 
 	"github.com/chenx-dust/go-net-lab/paracat/packet"
 )
@@ -25,23 +24,31 @@ func (client *Client) handleForward() {
 			}
 			packetID := client.packetFilter.NewPacketID()
 
-			wg := sync.WaitGroup{}
+			client.packetStat.Forward.CountPacket(uint32(n))
+
 			for _, relay := range client.tcpRelays {
-				wg.Add(1)
 				go func() {
-					defer wg.Done()
-					packet.WritePacket(relay, buf[:n], connID, packetID)
+					n, err := packet.WritePacket(relay, buf[:n], connID, packetID)
+					if err != nil {
+						log.Println("error writing to tcp:", err)
+					}
+					if n != len(buf) {
+						log.Println("error writing to tcp: wrote", n, "bytes instead of", len(buf))
+					}
 				}()
 			}
 			udpPacked := packet.Pack(buf[:n], connID, packetID)
 			for _, relay := range client.udpRelays {
-				wg.Add(1)
 				go func() {
-					defer wg.Done()
-					relay.Write(udpPacked)
+					n, err := relay.Write(udpPacked)
+					if err != nil {
+						log.Println("error writing to udp:", err)
+					}
+					if n != len(udpPacked) {
+						log.Println("error writing to udp: wrote", n, "bytes instead of", len(udpPacked))
+					}
 				}()
 			}
-			wg.Wait()
 		}()
 	}
 }

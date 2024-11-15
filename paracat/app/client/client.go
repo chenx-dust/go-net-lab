@@ -6,6 +6,7 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/chenx-dust/go-net-lab/paracat/config"
 	"github.com/chenx-dust/go-net-lab/paracat/packet"
@@ -23,14 +24,16 @@ type Client struct {
 	connAddrIDMap map[string]uint16
 
 	packetFilter *packet.PacketFilter
+	packetStat   *packet.BiPacketStatistic
 }
 
 func NewClient(cfg *config.Config) *Client {
 	return &Client{
 		cfg:           cfg,
-		packetFilter:  packet.NewPacketManager(),
 		connIDAddrMap: make(map[uint16]*net.UDPAddr),
 		connAddrIDMap: make(map[string]uint16),
+		packetFilter:  packet.NewPacketManager(),
+		packetStat:    packet.NewBiPacketStatistic(),
 	}
 }
 
@@ -72,6 +75,13 @@ func (client *Client) Run() error {
 			client.handleUDPReverse(relay)
 		}()
 	}
+	go func() {
+		ticker := time.NewTicker(client.cfg.ReportInterval)
+		defer ticker.Stop()
+		for range ticker.C {
+			client.packetStat.Print(client.cfg.ReportInterval)
+		}
+	}()
 	wg.Wait()
 
 	return nil

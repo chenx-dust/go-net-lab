@@ -20,9 +20,7 @@ func (client *Client) handleTCPReverse(conn *net.TCPConn) error {
 			continue
 		}
 
-		go func() {
-			client.sendReverse(buf[:n], n, connID)
-		}()
+		go client.sendReverse(buf[:n], n, connID)
 	}
 }
 
@@ -45,9 +43,7 @@ func (client *Client) handleUDPReverse(conn *net.UDPConn) error {
 			continue
 		}
 
-		go func() {
-			client.sendReverse(data, len(data), connID)
-		}()
+		go client.sendReverse(data, len(data), connID)
 	}
 }
 
@@ -59,5 +55,12 @@ func (client *Client) sendReverse(buf []byte, length int, connID uint16) {
 		log.Println("conn not found")
 		return
 	}
-	client.udpListener.WriteToUDP(buf[:length], udpAddr)
+	client.packetStat.Reverse.CountPacket(uint32(length))
+	n, err := client.udpListener.WriteToUDP(buf[:length], udpAddr)
+	if err != nil {
+		log.Println("error writing to udp:", err)
+	}
+	if n != length {
+		log.Println("error writing to udp: wrote", n, "bytes instead of", length)
+	}
 }
